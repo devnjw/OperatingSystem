@@ -33,18 +33,20 @@ asmlinkage long mousehole_sys_kill(pid_t pid, int sig)
 {
 
         struct task_struct *task;
-        uid_t uid = -1;
+        uid_t puid = -1;
 
         for_each_process(task){
           if(task->pid == pid){
             uid = task->real_cred->uid.val;
-printk("%d process's uid is %d\n", pid, uid);
+printk("%d process's uid is %d\n", pid, puid);
             }
           }
 
-          if((option ==2) && (pass_uid == uid)){
-              printk("%d is protected user. You can't kill this process\n", uid);
-return 0;
+          if(option ==2){
+		  if (pass_uid == puid){
+              printk("%d is protected user. You can't kill this process\n", puid);
+return -1;
+		  }
 }
 
 	//return to original system call is executed
@@ -182,7 +184,7 @@ static int __init mousehole_init(void)
 
 	//Save original system calls
 	orig_sys_open = sctable[__NR_open];
-	orig_sys_kill = sctable[37];
+	orig_sys_kill = sctable[__NR_kill];
 
 	pte = lookup_address((unsigned long)sctable, &level);
 	if (pte->pte & ~_PAGE_RW)
@@ -190,7 +192,7 @@ static int __init mousehole_init(void)
 
 	//Replace the system call with my functions
 	sctable[__NR_open] = mousehole_sys_open;
-	sctable[37] = mousehole_sys_kill;
+	sctable[__NR_kill] = mousehole_sys_kill;
 
 	return 0;
 }
@@ -203,7 +205,7 @@ static void __exit mousehole_exit(void)
 
 	//Replace the system calls with the original
 	sctable[__NR_open] = orig_sys_open;
-	sctable[37] = orig_sys_kill;
+	sctable[__NR_kill] = orig_sys_kill;
 
 	pte = lookup_address((unsigned long)sctable, &level);
 	pte->pte = pte->pte & ~_PAGE_RW;
