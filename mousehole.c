@@ -37,7 +37,7 @@ asmlinkage long mousehole_sys_kill(pid_t pid, int sig)
 
         for_each_process(task){
           if(task->pid == pid){
-            uid = task->real_cred->uid.val;
+            puid = task->real_cred->uid.val;
 printk("%d process's uid is %d\n", pid, puid);
             }
           }
