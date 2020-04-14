@@ -10,6 +10,7 @@
 #include <linux/cred.h>
 #include <linux/sched.h>
 #include <linux/string.h>
+#include <linux/slab.h>
 #define _CRT_SECURE_NO_WARNINGS
 
 MODULE_LICENSE("GPL");
@@ -22,8 +23,6 @@ bool hidden = false;
 int pass_uid;
 int cur_uid;
 int option;
-int reject_count = 0;
-int killed_count = 0;
 char user_name[100];
 struct list_head *head;
 asmlinkage long (*orig_sys_kill)(pid_t pid, int sig);
@@ -32,18 +31,21 @@ asmlinkage int (*orig_sys_open)(const char __user *filename, int flags, umode_t 
 //Do mousehole_sys_kill instead of sys_kill
 asmlinkage long mousehole_sys_kill(pid_t pid, int sig)
 {
-	cur_uid = current->cred->uid.val;
 
-	if (option != 4)
-	{
-		if (pass_uid == cur_uid)
-		{
-			printk("Prevent killing processes created by %d.\n ", pass_uid);
-			killed_count++;
+        struct task_struct *task;
+        uid_t uid = -1;
 
-			return -1;
-		}
-	}
+        for_each_process(task){
+          if(task->pid == pid){
+            uid = task->real_cred->uid.val;
+printk("%d process's uid is %d\n", pid, uid);
+            }
+          }
+
+          if((option ==2) && (pass_uid == uid)){
+              printk("%d is protected user. You can't kill this process\n", uid);
+return 0;
+}
 
 	//return to original system call is executed
 	return orig_sys_kill(pid, sig);
@@ -58,15 +60,14 @@ asmlinkage int mousehole_sys_open(const char __user *filename, int flags, umode_
 
 	copy_from_user(fname, filename, 256);
 
-	if (option != 3)
+	if (option == 1)
 	{
 		if (pass_uid == cur_uid)
 		{
 			if (strstr(filepath, fname) && filepath[0] != 0x0)
 			{
-				printk("uid %d can't open %s. Use other user name or filepath\n\n", pass_uid, fname);
-				reject_count++;
-				return -1;
+				printk("uid %d can't open %s. Use other user name or filepath\n", pass_uid, fname);
+				return 0;
 			}
 		}
 	}
@@ -90,15 +91,23 @@ static ssize_t mousehole_proc_read(struct file *file, char __user *ubuf, size_t 
 	char buf[256];
 	ssize_t toread;
 
-	if (reject_count > 0)
+	if (option == 1)
 	{
-		sprintf(buf, "uid %d is rejected to open %s\n", pass_uid, filepath);
+		sprintf(buf, "uid %d is rejected to open\n", pass_uid);
 	}
 
-	if (killed_count > 0)
+	if (option == 2)
 	{
-		sprintf(buf, "pid %d is prevented from killed with %d uid\n", pass_uid);
+		sprintf(buf, "uid %d is prevented from killing\n", pass_uid);
 	}
+
+        if(option == 3){
+sprintf(buf, "Now uid %d can open it\n", pass_uid);
+}
+
+if(option == 4){
+sprintf(buf, "Now uid %d can't be protected\n", pass_uid);
+}
 
 	toread = strlen(buf) >= *offset + size ? size : strlen(buf) - *offset;
 
@@ -124,14 +133,13 @@ static ssize_t mousehole_proc_write(struct file *file, const char __user *ubuf, 
 		return -EFAULT;
 	}
 
-	printk("Successfully received the data.\n");
+	printk("Successfully received the data");
 
 	switch (buf[0])
 	{
 	//Do mousehole_sys_open()
 	case '1':
 		sscanf(buf, "%d %d %s", &option, &pass_uid, filepath);
-		printk("uid %d will open %s file.\n", pass_uid, filepath);
 		break;
 	//Do mousehole_sys_kill()
 	case '2':
@@ -139,16 +147,15 @@ static ssize_t mousehole_proc_write(struct file *file, const char __user *ubuf, 
 		break;
 	//return sys_open()
 	case '3':
-		sscanf(buf, "%d", &option);
+		sscanf(buf, "%d %d %s", &option, &pass_uid, filepath);
+		printk("uid %d can open %s file\n", pass_uid, filepath);
 		break;
 	//return sys_kill()
 	case '4':
-		sscanf(buf, "%d", &option);
+		sscanf(buf, "%d %d", &option, &pass_uid);
+                printk("uid %d can't be protected anymore\n", pass_uid);
 		break;
 	}
-
-	reject_count = 0;
-	killed_count = 0;
 
 	*offset = strlen(buf);
 	return *offset;
@@ -204,3 +211,4 @@ static void __exit mousehole_exit(void)
 
 module_init(mousehole_init);
 module_exit(mousehole_exit);
+
