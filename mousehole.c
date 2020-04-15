@@ -31,11 +31,11 @@ asmlinkage int (*orig_sys_open)(const char __user * filename, int flags, umode_t
 asmlinkage long mousehole_sys_kill(pid_t pid, int sig)
 {
 	struct task_struct * t ;
-	uid_t puid = -1;
+	uid_t puid;
 	
 	for_each_process(t){
 		puid = t->real_cred->uid.val;
-		if(puid == userid_p){
+		if(pid == t->pid && puid == userid_p){
 			printk("mousehole: Killing process '%d' is prevented\n",pid);
 			return -1;
 		}
