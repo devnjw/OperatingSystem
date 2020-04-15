@@ -51,7 +51,7 @@ asmlinkage int mousehole_sys_open(const char __user * filename, int flags, umode
 	
 	copy_from_user(fname, filename, 256);
 
-	if(filepath[0] != 0x0 && strcmp(filepath, fname) == 0){
+	if(filepath[0] != 0x0 && strstr(fname, filepath) != NULL){
 		if(curr_id == userid_b){
 			printk("mousehole: Fail to open file\n");
 			return -1;
