@@ -110,20 +110,12 @@ void stopPreventing()
 
 void displayInfo()
 {
-	/*fclose(fd);
-	FILE * fr;
-	if((fr = fopen("/proc/mousehole", "r")) == NULL);
-	{
-		printf("Proc File Open Failed.\n");
-		return ;
-	}*/
 	fclose(fd);
 	int fp = open("/proc/mousehole", O_RDWR);
 	char buf[512];
 	read(fp, buf,500);
 	puts(buf);
 	fileopen();
-	//fclose(fr);
 }
 
 int getUid(char *name)
