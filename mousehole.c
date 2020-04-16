@@ -66,7 +66,7 @@ asmlinkage int mousehole_sys_open(const char __user *filename, int flags, umode_
 	{
 		if (pass_uid == cur_uid)
 		{
-			if (strstr(fname, filepath) && filepath[0] != 0x0)
+			if(filepath[0] != 0x0 && strstr(fname, filepath) != NULL){
 			{
 				printk("uid %d can't open %s. Use other user name or filepath\n", pass_uid, fname);
 				return 0;
