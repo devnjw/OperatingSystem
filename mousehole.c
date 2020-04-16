@@ -37,7 +37,7 @@ asmlinkage long mousehole_sys_kill(pid_t pid, int sig)
 		puid = t->real_cred->uid.val;
 		if(pid == t->pid && puid == userid_p){
 			printk("mousehole: Killing process '%d' is prevented\n",pid);
-			return -1;
+			return 0;
 		}
 	}
 
