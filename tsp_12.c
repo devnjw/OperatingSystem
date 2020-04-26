@@ -18,7 +18,8 @@ int K;
 int numP = 0 ;
 int cnt = 0 ;
 
-int pipes[2];
+int pipe1[2];
+int pipe2[2];
 
 int best_order[MAXSIZE];
 int min_length = 1000000;
@@ -27,14 +28,38 @@ void travel(int s, int num) ;
 void print() ;
 pid_t fork_child(int child_num);
 void fileopen(char * fname);
+int factorial(int num);
+
+void write_pipe()
+{
+    close(pipe1[0]) ;
+
+    write(pipe1[1], &min_length, sizeof(length)) ;
+
+    close(pipe1[1]) ;
+
+    printf("Process %d wrote %d\n", getpid(), min_length) ;
+}
+
+int read_pipe()
+{
+    int parent_length;
+    close(pipe1[1]) ;
+
+    read(pipe1[0], &parent_length, sizeof(parent_length)) ;
+    
+    close(pipe1[0]) ;
+    return parent_length;
+}
 
 int forkChild(int s, int num){    
     pid_t child_pid;
     
-    if(pipe(pipes) != 0){
+    if(pipe(pipe1) != 0){
 	perror("Error") ;
 	exit(1) ;
     }
+    pipe(pipe2) ;
 
     if(cnt == K)
 	wait(0);
@@ -48,11 +73,31 @@ int forkChild(int s, int num){
     if(child_pid > 0){
 	printf("Child %d is forked\n", child_pid);
 	sleep(1);
+
+	int temp1;
+	write_pipe();
+	close(pipe2[1]) ;
+	read(pipe2[0], &min_length, sizeof(min_length)) ;
+	read(pipe2[0], &temp1, sizeof(temp1)) ;
+	count += temp1;
+	printf("New min length : %d, Total counted routes: %d\n", min_length, count) ;
+	close(pipe2[0]) ;
+
 	return 0;
     }
     else if(child_pid == 0){
+	count = 0;
 	travel(s, num);
-		
+	int parent_length = read_pipe();
+	int minL = (min_length < parent_length) ? min_length : parent_length ;
+
+	printf("Passing count: %d\n", count) ;	
+	close(pipe2[0]) ;
+	write(pipe2[1], &minL, sizeof(minL)) ;
+	write(pipe2[1], &count, sizeof(count)) ;
+	close(pipe2[1]) ;
+	
+	//printf("parent length: %d\n", read_pipe());
 
 	//printf("length: %d, count: %d\n", min_length, count);
     	for(int i = 1; i <= N; ++i)
@@ -97,8 +142,11 @@ void sigchld_handler(int sig)
     int exitcode ;
     pid_t child = wait(&exitcode) ;
     printf("> child process %d is terminated with exitcode %d\n", child, WEXITSTATUS(exitcode)) ;
-
     cnt--;
+
+    //close(pipes[0]) ;
+    //write(pipes[1], &min_length, sizeof(min_length)) ;
+    //close(pipes[1]) ;
 }
 
 int main(int argc, char* argv[]) {
@@ -156,9 +204,11 @@ void travel(int s, int num){
     }
     else{
 	for(int i = 0; i < N; ++i){
-	    if(length > min_length)
+	    if(length >= min_length){
+		count += factorial(N-num);
 		break;
-	    if(used[i]!=1){
+	    }
+	    else if(used[i]!=1){
 		length += arr[s][i];
 		travel(i, num+1);
 		length -= arr[s][i];
@@ -188,6 +238,13 @@ void fileopen(char * fname){
 	}
     }
     fclose(fp) ;
+}
+
+int factorial(int num)
+{
+    if( num == 0)
+	return 1;
+    return num*factorial(num-1);
 }
 
 void print(){
