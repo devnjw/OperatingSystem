@@ -24,6 +24,7 @@ int pipe2[2];
 int best_order[MAXSIZE];
 int min_length = 1000000;
 
+void print_solution() ;
 void travel(int s, int num) ;
 void print() ;
 pid_t fork_child(int child_num);
@@ -67,6 +68,7 @@ void parent_read_pipe()
 	for(int i = 1; i <= N; ++i)
 	    printf("%d-",best_order[i]) ;
 	printf("%d\n",best_order[1]) ;
+	
     }
 }
 
@@ -99,7 +101,7 @@ void forkChild(int s, int num){
     }
 
     if(child_pid > 0){
-	//printf("Child %d is forked\n", child_pid);
+	printf("Child %d is forked\n", child_pid);
 	//sleep(1);
 
 	write_pipe();
@@ -110,11 +112,11 @@ void forkChild(int s, int num){
 	travel(s, num);
 	
 	child_write_pipe();
-
-    	//for(int i = 1; i <= N; ++i)
-	    //printf("%d-", best_order[i]);
-	//printf("%d length: %d\n", best_order[1], min_length);
-	exit(0) ;
+/*
+    	for(int i = 1; i <= N; ++i)
+	    printf("%d-", best_order[i]);
+	printf("%d length: %d\n", best_order[1], min_length);
+	*/exit(0) ;
     }
 }
 
@@ -145,12 +147,32 @@ void sigchld_handler(int sig)
 {
     int exitcode ;
     pid_t child = wait(&exitcode) ;
-    //printf("> child process %d is terminated with exitcode %d\n", child, WEXITSTATUS(exitcode)) ;
+    printf("> child process %d is terminated with exitcode %d\n", child, WEXITSTATUS(exitcode)) ;
     cnt--;
 
     //close(pipes[0]) ;
     //write(pipes[1], &min_length, sizeof(min_length)) ;
     //close(pipes[1]) ;
+}
+
+void kill_childs()
+{
+    //for(int i = 0; i < K; ++i)
+	//kill(curr_cpid[i], SIGKILL) ;
+}
+
+void sigint_handler(int sig)
+{
+    //kill_childs();
+	    
+    //Print out Solution
+    printf("The best solution route: [");
+    for(int i = 1; i <= N; ++i)
+        printf("%d-", best_order[i]);
+    printf("%d], length: %d\n", best_order[1], min_length);
+    printf("Total number of forked child precess is %d\n", numP);
+
+    exit(0);
 }
 
 int main(int argc, char* argv[]) {
@@ -161,6 +183,7 @@ int main(int argc, char* argv[]) {
     clock_t begin = clock();
 
     signal(SIGCHLD, sigchld_handler) ;
+    signal(SIGINT, sigint_handler) ;
     
     for(int i = 0; i < N; ++i)
 	distributeTasks(i, 1) ;
@@ -168,18 +191,20 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < N%K; ++i)
 	wait(0x0);
 
-    //Print out Solution
+    print_solution() ;
+ 
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC ;
+    printf("Execution time : %f\n", time_spent);
+}
+void print_solution(){
+   //Print out Solution
     printf("The best solution route: [");
     for(int i = 1; i <= N; ++i)
 	printf("%d-", best_order[i]);
     printf("%d], length: %d\n", best_order[1], min_length);
     printf("Total number of forked child precess is %d\n", numP);
-
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC ;
-    printf("Execution time : %f\n", time_spent);
 }
-
 
 pid_t fork_child(int child_num){
     pid_t child_pid ;
