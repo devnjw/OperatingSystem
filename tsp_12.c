@@ -17,6 +17,8 @@ int N, count = 0;
 int K;
 int numP = 0 ;
 int cnt = 0 ;
+int curr_cpid[12];
+int parent_pid;
 
 int pipe1[2];
 int pipe2[2];
@@ -24,28 +26,14 @@ int pipe2[2];
 int best_order[MAXSIZE];
 int min_length = 1000000;
 
+void push_cpid();
+void del_cpid();
 void print_solution() ;
 void travel(int s, int num) ;
 void print() ;
 pid_t fork_child(int child_num);
 void fileopen(char * fname);
 int factorial(int num);
-
-void write_pipe()
-{
-    close(pipe1[0]) ;
-    write(pipe1[1], &min_length, sizeof(length)) ;
-    close(pipe1[1]) ;
-}
-
-int read_pipe()
-{
-    int parent_length;
-    close(pipe1[1]) ;
-    read(pipe1[0], &parent_length, sizeof(parent_length)) ;
-    close(pipe1[0]) ;
-    return parent_length;
-}
 
 void parent_read_pipe()
 {
@@ -67,8 +55,7 @@ void parent_read_pipe()
 	printf("Updated Status! Min Length: %d\nBest Order: ", min_length) ;
 	for(int i = 1; i <= N; ++i)
 	    printf("%d-",best_order[i]) ;
-	printf("%d\n",best_order[1]) ;
-	
+	printf("%d\n",best_order[1]) ;	
     }
 }
 
@@ -103,20 +90,23 @@ void forkChild(int s, int num){
     if(child_pid > 0){
 	printf("Child %d is forked\n", child_pid);
 	//sleep(1);
-
-	write_pipe();
+	push_cpid(child_pid);
 	parent_read_pipe() ;
     }
     else if(child_pid == 0){
 	count = 0;
+	//int parent_len = min_length;
 	travel(s, num);
 	
-	child_write_pipe();
+	//if(min_length > parent_len)
+	    child_write_pipe();
+	sleep(10);
 /*
     	for(int i = 1; i <= N; ++i)
 	    printf("%d-", best_order[i]);
 	printf("%d length: %d\n", best_order[1], min_length);
-	*/exit(0) ;
+	*/
+	exit(0) ;
     }
 }
 
@@ -146,8 +136,10 @@ void distributeTasks(int s, int num){
 void sigchld_handler(int sig)
 {
     int exitcode ;
-    pid_t child = wait(&exitcode) ;
-    printf("> child process %d is terminated with exitcode %d\n", child, WEXITSTATUS(exitcode)) ;
+    pid_t child = wait(0x0) ;
+    printf("> child process %d is terminated\n", child) ;
+
+    del_cpid(child) ;
     cnt--;
 
     //close(pipes[0]) ;
@@ -157,20 +149,20 @@ void sigchld_handler(int sig)
 
 void kill_childs()
 {
-    //for(int i = 0; i < K; ++i)
-	//kill(curr_cpid[i], SIGKILL) ;
+    for(int i = 0; i < K; ++i){
+	printf("Kill process %d\n", curr_cpid[i]);
+	if(curr_cpid[i]>0)
+	    kill(curr_cpid[i], SIGKILL) ;
+	wait(0x0);
+    }
 }
 
 void sigint_handler(int sig)
 {
-    //kill_childs();
-	    
-    //Print out Solution
-    printf("The best solution route: [");
-    for(int i = 1; i <= N; ++i)
-        printf("%d-", best_order[i]);
-    printf("%d], length: %d\n", best_order[1], min_length);
-    printf("Total number of forked child precess is %d\n", numP);
+    if(getpid() == parent_pid){
+	kill_childs() ;	
+	print_solution() ;
+    }
 
     exit(0);
 }
@@ -179,6 +171,7 @@ int main(int argc, char* argv[]) {
     K = atoi(argv[2]);
     fileopen(argv[1]);
     print();
+    parent_pid = getpid() ;
 
     clock_t begin = clock();
 
@@ -190,8 +183,9 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < N%K; ++i)
 	wait(0x0);
-
-    print_solution() ;
+    
+    if(getpid()==parent_pid)
+	print_solution() ;
  
     clock_t end = clock();
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC ;
@@ -199,11 +193,12 @@ int main(int argc, char* argv[]) {
 }
 void print_solution(){
    //Print out Solution
+    //printf("Process ID: %d\n", getpid()) ;
     printf("The best solution route: [");
     for(int i = 1; i <= N; ++i)
 	printf("%d-", best_order[i]);
     printf("%d], length: %d\n", best_order[1], min_length);
-    printf("Total number of forked child precess is %d\n", numP);
+    printf("The total number of traveled routes: %d\n", count);
 }
 
 pid_t fork_child(int child_num){
@@ -243,6 +238,21 @@ void travel(int s, int num){
 
     used[s] = 0 ;
     order[num] = -1;
+}
+
+void push_cpid(int cpid)
+{
+    for(int i = 0; i < K; ++i)
+	if(curr_cpid[i]==0){
+	    curr_cpid[i] = cpid;
+	    break;
+	}
+}
+void del_cpid(int cpid)
+{
+    for(int i = 0; i < K; ++i)
+	if(curr_cpid[i]==cpid)
+	    curr_cpid[i]=0;
 }
 
 void fileopen(char * fname){

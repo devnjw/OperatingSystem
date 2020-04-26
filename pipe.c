@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 int pipes[2] ;
 int length = 0;
@@ -16,9 +17,9 @@ void pipe_write(int i)
     length = i;
     write(pipes[1], &length, sizeof(length));
 
-    //close(pipes[1]) ;
+    close(pipes[1]) ;
     
-    printf("Process number %d is closing\n", i);
+    //printf("Process number %d is closing\n", i);
 }
 
 void pipe_read()
@@ -28,11 +29,20 @@ void pipe_read()
     read(pipes[0], &length, sizeof(length)) ;
     printf("Length = %d\n", length) ;
 
-    //close(pipes[0]) ;
+    close(pipes[0]) ;
+}
+
+void handler(int sig)
+{
+    int exitcode ;
+    pid_t child = wait(&exitcode) ;
+    printf("> child %d is terminated with exitcode %d\n", child, exitcode) ;
 }
 
 int main()
 {
+    signal(SIGCHLD, handler) ;
+	
     pid_t child_pid ;
     int exit_code ;
 
@@ -44,9 +54,11 @@ int main()
 	child_pid = fork();
 	if(child_pid == 0) {
 	    pipe_write(i) ;
+	    sleep(5);
 	    break;
 	}
 	else if(child_pid > 0){
+	    printf("child %d is forked\n", child_pid) ;
 	    pipe_read();
 	}
     }
