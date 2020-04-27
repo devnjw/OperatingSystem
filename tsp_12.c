@@ -153,8 +153,9 @@ void sigchld_handler(int sig)
 
 void kill_childs()
 {
+    parent_read_pipe() ;
     for(int i = 0; i < K; ++i){
-	//printf("Kill process %d\n", curr_cpid[i]);
+	printf("Kill process %d\n", curr_cpid[i]);
 	if(curr_cpid[i]>0)
 	    kill(curr_cpid[i], SIGINT) ;
 	wait(0x0);
@@ -169,6 +170,8 @@ void sigint_handler(int sig)
 	print_solution() ;
     }
     else{
+	printf("I'm a child %d, I want to write pipe\n", getpid()) ;
+	print_solution() ;
 	child_write_pipe() ;
     }
 
@@ -201,7 +204,6 @@ int main(int argc, char* argv[]) {
 }
 void print_solution(){
     //Print out Solution
-    //printf("Process ID: %d\n", getpid()) ;
     printf("The best solution route: [");
     for(int i = 1; i <= N; ++i)
 	printf("%d-", best_order[i]);
