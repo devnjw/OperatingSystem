@@ -12,3 +12,7 @@ Deadlock Detector [[Video]](https://youtu.be/jOLdFVCnvas) [[PDF]](https://github
 
 
 Simple Heap Memory Allocation Library [[PDF]](https://github.com/devnjw/OperatingSystem/blob/master/SmallocAPI/21600212_%EB%82%A8%EC%A7%84%EC%9A%B0_hw05.pdf)
+
+<br>
+### Example of Paper work
+![image](https://user-images.githubusercontent.com/48133047/119149075-1eccf800-ba88-11eb-990f-065949b109f1.png)
