@@ -15,4 +15,4 @@ Simple Heap Memory Allocation Library [[PDF]](https://github.com/devnjw/Operatin
 
 <br>
 ### Example of Paper work
-![image](https://user-images.githubusercontent.com/48133047/119149075-1eccf800-ba88-11eb-990f-065949b109f1.png)
+[image](https://user-images.githubusercontent.com/48133047/119149075-1eccf800-ba88-11eb-990f-065949b109f1.png)
